@@ -3,476 +3,199 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Firebase 연동 앱 테스트</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
-        body { padding: 20px; background: #f4f4f9; max-width: 500px; margin: 0 auto; }
-        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h2 { font-size: 1.1rem; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        button { padding: 6px 12px; border: none; background: #007bff; color: white; border-radius: 4px; cursor: pointer; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        input, select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 5px; width: 100%; }
-        .btn-amber { background: #ffc107; color: #000; }
-        .btn-green { background: #28a745; color: white; }
-        .hidden { display: none !important; }
-    </style>
+    <title>지식의 정원 - 감성 공부방 🌿</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- 0. 로그인 / 회원가입 카드 -->
-    <div class="card" id="auth-card">
-        <h2>🔒 로그인 / 회원가입</h2>
-        <div style="display: flex; flex-direction: column; gap: 5px;">
-            <input type="email" id="auth-email" placeholder="이메일 입력">
-            <input type="password" id="auth-pw" placeholder="비밀번호 입력">
-            <div class="row" style="margin-top: 5px;">
-                <button onclick="handleSignUp()" style="width: 48%;">회원가입</button>
-                <button onclick="handleLogin()" class="btn-green" style="width: 48%;">로그인</button>
+    <div class="game-area">
+        <div class="header">
+            <div class="status-group">
+                <span class="level-badge" id="level-display">Lv.1</span>
+                <button class="level-reward-btn" onclick="showLevelRewardsInfo()" title="성장 로드맵 보기">🎁</button>
+                <div class="xp-bar-container">
+                    <div class="xp-bar" id="xp-bar"></div>
+                    <span class="xp-text" id="xp-text">0 / 120</span>
+                </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="coin-display" id="coin-display">🪙 300</div>
+                <button class="icon-btn" onclick="openAuthModal()" title="내 정보 / 로그인">👤</button>
+            </div>
+        </div>
+
+        <div class="timer-section">
+            <div class="timer-display" id="timer">00:10:00</div>
+            <div class="timer-setup" id="timer-setup">
+                <button onclick="adjustTargetTime(-10)">-10m</button>
+                <button onclick="adjustTargetTime(-1)">-1m</button>
+                <span id="target-time-display">10분</span>
+                <button onclick="adjustTargetTime(1)">+1m</button>
+                <button onclick="adjustTargetTime(10)">+10m</button>
+            </div>
+        </div>
+
+        <div class="plant-room" id="room">
+            <div class="bg-decor-slot slot-1" id="bg-decor-1"></div>
+            <div class="bg-decor-slot slot-2" id="bg-decor-2"></div>
+            <div class="bg-decor-slot slot-3" id="bg-decor-3"></div>
+
+            <div class="bubble" id="bubble-chat">오늘도 같이 무럭무럭 자라요! 🌱</div>
+
+            <div class="plant-container">
+                <img id="plant-img" src="lv1.png" alt="성장하는 식물">
+                <div class="vde-decor-slot" id="vde-decor"></div>
+            </div>
+
+            <div class="room-floor-banner" id="equipped-banner">🪴 기본 식물 공간</div>
+        </div>
+
+        <div class="timer-btn-group">
+            <button class="timer-btn main-btn" id="timer-main-btn" onclick="handleMainTimerBtn()">집중 시작하기 ✨</button>
+            <button class="timer-btn stop-btn" id="timer-stop-btn" onclick="resetTimer()" style="display: none;">포기하기 🛑</button>
+        </div>
+
+        <div class="content-scroll-area">
+            <!-- 홈 (미션) 화면 -->
+            <section id="screen-home" class="screen active">
+                <div class="mission-section">
+                    <div class="mission-title-bar">
+                        <span>오늘의 공부 미션 🌿</span>
+                        <span class="mission-status" id="mission-count">0/0 완료</span>
+                    </div>
+
+                    <div class="mission-input-group">
+                        <input type="text" id="custom-mission-input" placeholder="새 할 일/미션 입력..." maxlength="20">
+                        <button onclick="addCustomMission()">추가</button>
+                    </div>
+
+                    <div id="mission-list"></div>
+                </div>
+            </section>
+
+            <!-- 보관함 화면 -->
+            <section id="screen-decor" class="screen">
+                <div class="shop-header">
+                    <button class="shop-pill active" id="decor-tab-all" onclick="switchDecorTab('all')">전체</button>
+                    <button class="shop-pill" id="decor-tab-bg" onclick="switchDecorTab('bg')">배경 테마</button>
+                    <button class="shop-pill" id="decor-tab-de" onclick="switchDecorTab('de')">배경 장식</button>
+                    <button class="shop-pill" id="decor-tab-vde" onclick="switchDecorTab('vde')">화분 장식</button>
+                </div>
+                <div class="item-grid" id="inventory-grid"></div>
+            </section>
+
+            <!-- 상점 화면 -->
+            <section id="screen-shop" class="screen">
+                <div class="shop-header">
+                    <button class="shop-pill active" id="tab-bg" onclick="switchShopTab('bg')">배경 테마</button>
+                    <button class="shop-pill" id="tab-de" onclick="switchShopTab('de')">배경 장식</button>
+                    <button class="shop-pill" id="tab-vde" onclick="switchShopTab('vde')">화분 장식</button>
+                </div>
+                <div class="item-grid" id="shop-grid"></div>
+            </section>
+
+            <!-- 출석체크 화면 (달력 보류 숨김) -->
+            <section id="screen-attendance" class="screen">
+                <div class="attendance-card">
+                    <div class="attendance-streak-header">
+                        🔥 <span id="streak-days">1</span>일 연속 물주기 성공!
+                    </div>
+                    <div class="attendance-sub-text">
+                        이번 달 총 <span id="monthly-count">1</span>회 출석 🎉
+                    </div>
+                    <button class="attendance-action-btn" onclick="checkAttendanceFirebase()">오늘의 출석체크 하기 (+10 코인)</button>
+                    <div class="reward-pills">
+                        <div class="reward-pill" id="reward-3">🎁 3일 (+20)</div>
+                        <div class="reward-pill locked" id="reward-7">🔒 7일 (+50)</div>
+                        <div class="reward-pill locked" id="reward-14">🔒 14일 (+100)</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 그룹 화면 (네비게이션 이동 완료 및 멤버/집중시간 표시) -->
+            <section id="screen-group" class="screen">
+                <div class="settings-title-header">👥 공부 그룹 관리</div>
+                <div class="group-section-box">
+                    <h4>새 그룹 생성</h4>
+                    <input type="text" id="create-group-name" class="modal-input" placeholder="그룹 이름">
+                    <button class="modal-primary-btn" onclick="createGroup()">그룹 생성하기</button>
+                </div>
+                <hr style="margin: 14px 0; border: none; border-top: 1px dashed #cbd5e1;">
+                <div class="group-section-box">
+                    <h4>기존 그룹 가입</h4>
+                    <input type="text" id="join-group-code" class="modal-input" placeholder="그룹 코드 입력">
+                    <button class="modal-secondary-btn" onclick="joinGroup()">그룹 가입하기</button>
+                </div>
+                <hr style="margin: 14px 0; border: none; border-top: 1px dashed #cbd5e1;">
+                <div class="group-section-box">
+                    <h4>내 그룹 및 멤버 집중 시간</h4>
+                    <div id="my-group-list" style="font-size: 0.85rem; color: #64748b;">가입된 그룹이 없습니다.</div>
+                </div>
+            </section>
+        </div>
+
+        <!-- 하단 네비게이션 (그룹 버튼 추가) -->
+        <div class="button-group">
+            <button class="action-btn nav-home active" onclick="showScreen('home')">🏠<br>홈</button>
+            <button class="action-btn nav-decor" onclick="showScreen('decor')">🎒<br>보관함</button>
+            <button class="action-btn nav-shop" onclick="showScreen('shop')">🏪<br>코인숍</button>
+            <button class="action-btn nav-attendance" onclick="showScreen('attendance')">📅<br>출석</button>
+            <button class="action-btn nav-group" onclick="showScreen('group')">👥<br>그룹</button>
+        </div>
+    </div>
+
+    <!-- 로그인 모달 -->
+    <div id="auth-modal" class="level-up-overlay" style="display: none;">
+        <div class="roadmap-popup-content">
+            <div class="roadmap-header">
+                <h3>👤 로그인 / 회원가입</h3>
+                <button class="close-x-btn" onclick="closeAuthModal()">✕</button>
+            </div>
+            <div class="roadmap-scroll-body">
+                <div id="auth-unlogged">
+                    <input type="email" id="auth-email" class="modal-input" placeholder="이메일 입력">
+                    <input type="password" id="auth-password" class="modal-input" placeholder="비밀번호 입력">
+                    <button class="modal-primary-btn" onclick="handleSignUp()">회원가입</button>
+                    <button class="modal-secondary-btn" onclick="handleLogin()">로그인</button>
+                </div>
+                <div id="auth-logged" style="display: none;">
+                    <p style="font-size: 0.85rem; margin-bottom: 12px; color: #334155;">
+                        <b id="user-display-email">user@email.com</b> 님, 환영합니다!
+                    </p>
+                    <button class="modal-logout-btn" onclick="handleLogout()">로그아웃</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 로그인 후 표시될 메인 앱 영역 -->
-    <div id="app-content" class="hidden">
-        
-        <!-- 사용자 정보 & 닉네임 설정 카드 -->
-        <div class="card">
-            <div class="row" style="margin-bottom: 10px;">
-                <span>👋 <strong id="user-nickname-display">사용자</strong> 님</span>
-                <button onclick="handleLogout()" style="background:#6c757d;">로그아웃</button>
+    <!-- 성장 로드맵 모달 -->
+    <div id="roadmap-modal" class="level-up-overlay" style="display: none;">
+        <div class="roadmap-popup-content">
+            <div class="roadmap-header">
+                <h3>🏆 식물 성장 로드맵</h3>
+                <button class="close-x-btn" onclick="closeRoadmapModal()">✕</button>
             </div>
-            <div class="row" style="gap: 5px; margin-bottom: 0;">
-                <input type="text" id="nickname-input" placeholder="새 닉네임 입력" style="margin-bottom:0;">
-                <button onclick="updateNickname()" class="btn-amber" style="white-space: nowrap;">닉네임 변경</button>
+            <div class="roadmap-scroll-body">
+                <div class="roadmap-timeline" id="roadmap-list"></div>
             </div>
         </div>
-
-        <!-- 1. 출석 체크 -->
-        <div class="card">
-            <h2>📅 연속 출석 체크</h2>
-            <div class="row">
-                <span>연속 출석: <strong id="streak-count">0</strong>일째</span>
-                <button id="attendance-btn" onclick="checkAttendance()">오늘 출석하기</button>
-            </div>
-        </div>
-
-        <!-- 2. 집중 타이머 -->
-        <div class="card">
-            <h2>⏱️ 집중 타이머</h2>
-            <div class="row" style="justify-content: center; font-size: 1.8rem; font-weight: bold; margin: 10px 0;">
-                <span id="timer-display">25:00</span>
-            </div>
-            <div class="row" style="justify-content: center; gap: 8px;">
-                <button onclick="toggleTimer()" id="timer-btn">시작</button>
-                <button onclick="resetTimer()" style="background:#dc3545;">리셋</button>
-                <button onclick="addFocusTime(1)" class="btn-amber">+1분 DB 즉시 적립</button>
-            </div>
-        </div>
-
-        <!-- 3. 주간 집중 시간 그래프 -->
-        <div class="card">
-            <h2>📊 주간 집중 시간 (분)</h2>
-            <canvas id="weeklyChart" height="200"></canvas>
-        </div>
-
-        <!-- 4. 개인 스터디 그룹 관리 -->
-        <div class="card">
-            <h2>👥 스터디 그룹 관리</h2>
-            
-            <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 12px;">
-                <div style="margin-bottom: 8px;">
-                    <input type="text" id="new-group-name" placeholder="새 스터디 그룹 이름">
-                    <button onclick="createGroup()" class="btn-green" style="width: 100%;">새 그룹 만들기</button>
-                </div>
-                <div>
-                    <input type="text" id="join-group-id" placeholder="초대 코드(그룹 ID) 입력">
-                    <button onclick="joinGroup()" style="width: 100%;">코드로 기존 그룹 참여</button>
-                </div>
-            </div>
-
-            <div>
-                <label style="font-size: 0.85rem; color: #555; display: block; margin-bottom: 4px;">내 그룹 목록 보기</label>
-                <select id="group-select" onchange="onGroupSelected()">
-                    <option value="">참여 중인 그룹이 없습니다</option>
-                </select>
-            </div>
-
-            <div id="selected-group-view" class="hidden" style="margin-top: 15px; background: #fafafa; padding: 10px; border-radius: 6px;">
-                <div class="row">
-                    <strong id="current-group-name" style="color: #007bff;">-</strong>
-                    <button onclick="leaveGroup()" style="background:#dc3545; font-size: 0.8rem;">그룹 탈퇴</button>
-                </div>
-                <p style="font-size: 0.8rem; color: #888; margin-bottom: 8px;">
-                    초대 코드: <span id="current-group-id" style="font-weight: bold; color: #333;">-</span>
-                </p>
-                <div id="group-member-list">
-                    <p style="color:#888; font-size: 0.85rem;">멤버 불러오는 중...</p>
-                </div>
-            </div>
-        </div>
-
     </div>
 
-    <!-- Firebase SDK 모듈 로드 -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } 
-            from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection, addDoc, arrayUnion, arrayRemove } 
-            from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    <!-- 레벨업 모달 -->
+    <div id="level-up-modal" class="level-up-overlay" style="display: none;">
+        <div class="level-up-content">
+            <div style="font-size: 2rem; margin-bottom: 5px;">✨🎉✨</div>
+            <h2 class="modal-title">LEVEL UP!</h2>
+            <div class="modal-level-badge" id="modal-level-num">Lv.2</div>
+            <div class="modal-reward-box">
+                <p class="reward-label">성장 완료 보상</p>
+                <div id="modal-reward-item" class="modal-item-icon">🪙</div>
+                <div id="modal-reward-text" class="modal-item-name">50 코인</div>
+            </div>
+            <button class="modal-close-btn" onclick="closeLevelUpModal()">확인 (Enter)</button>
+        </div>
+    </div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDRbaKkPkDt8XIu89AGSza5E0RxGdCXWLw",
-            authDomain: "focus1-13f51.firebaseapp.com",
-            projectId: "focus1-13f51",
-            storageBucket: "focus1-13f51.firebasestorage.app",
-            messagingSenderId: "693324510814",
-            appId: "1:693324510814:web:a5bc2e5cc64df9096326cf"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        let currentUser = null;
-        let weeklyChart = null;
-        let timerState = { remainingSeconds: 25 * 60, isRunning: false, interval: null };
-        let unsubscribeGroup = null;
-
-        // 한국 로컬 날짜 문자열 반환 (YYYY-MM-DD)
-        function getLocalDateString(dateObj = new Date()) {
-            const year = dateObj.getFullYear();
-            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const day = String(dateObj.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                document.getElementById('auth-card').classList.add('hidden');
-                document.getElementById('app-content').classList.remove('hidden');
-                
-                initChart();
-                listenUserData(user.uid);
-            } else {
-                currentUser = null;
-                document.getElementById('auth-card').classList.remove('hidden');
-                document.getElementById('app-content').classList.add('hidden');
-                if (unsubscribeGroup) unsubscribeGroup();
-            }
-        });
-
-        window.handleSignUp = async function() {
-            const email = document.getElementById('auth-email').value;
-            const pw = document.getElementById('auth-pw').value;
-            try {
-                const res = await createUserWithEmailAndPassword(auth, email, pw);
-                const defaultNickname = email.split('@')[0];
-                await setDoc(doc(db, "users", res.user.uid), {
-                    nickname: defaultNickname,
-                    attendanceStreak: 0,
-                    lastAttendanceDate: "",
-                    weeklyFocusMinutes: [0, 0, 0, 0, 0, 0, 0],
-                    groups: []
-                });
-                alert("회원가입 완료 및 로그인 되었습니다!");
-            } catch (err) { alert("회원가입 실패: " + err.message); }
-        };
-
-        window.handleLogin = async function() {
-            const email = document.getElementById('auth-email').value;
-            const pw = document.getElementById('auth-pw').value;
-            try {
-                await signInWithEmailAndPassword(auth, email, pw);
-            } catch (err) { alert("로그인 실패: " + err.message); }
-        };
-
-        window.handleLogout = function() {
-            signOut(auth);
-        };
-
-        window.updateNickname = async function() {
-            const newNick = document.getElementById('nickname-input').value.trim();
-            if (!newNick) return alert("변경할 닉네임을 입력해주세요.");
-
-            try {
-                await updateDoc(doc(db, "users", currentUser.uid), {
-                    nickname: newNick
-                });
-                document.getElementById('nickname-input').value = '';
-                alert("닉네임이 성공적으로 변경되었습니다!");
-            } catch (err) { alert("닉네임 변경 실패: " + err.message); }
-        };
-
-        function listenUserData(uid) {
-            const userRef = doc(db, "users", uid);
-            onSnapshot(userRef, async (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    
-                    document.getElementById('user-nickname-display').innerText = data.nickname || '사용자';
-                    document.getElementById('streak-count').innerText = data.attendanceStreak || 0;
-                    
-                    // 로컬 날짜 기준 체크
-                    const todayStr = getLocalDateString();
-                    const btn = document.getElementById('attendance-btn');
-                    
-                    if (data.lastAttendanceDate === todayStr) {
-                        btn.innerText = "오늘 출석 완료!";
-                        btn.disabled = true;
-                    } else {
-                        btn.innerText = "오늘 출석하기";
-                        btn.disabled = false;
-                    }
-
-                    if (data.weeklyFocusMinutes && weeklyChart) {
-                        weeklyChart.data.datasets[0].data = data.weeklyFocusMinutes;
-                        weeklyChart.update();
-                    }
-
-                    const groupIds = data.groups || [];
-                    await updateGroupSelectOptions(groupIds);
-                }
-            });
-        }
-
-        async function updateGroupSelectOptions(groupIds) {
-            const selectEl = document.getElementById('group-select');
-            const currentSelected = selectEl.value;
-            selectEl.innerHTML = '';
-
-            if (groupIds.length === 0) {
-                selectEl.innerHTML = '<option value="">참여 중인 그룹이 없습니다</option>';
-                document.getElementById('selected-group-view').classList.add('hidden');
-                if (unsubscribeGroup) unsubscribeGroup();
-                return;
-            }
-
-            for (const gId of groupIds) {
-                const gSnap = await getDoc(doc(db, "groups", gId));
-                if (gSnap.exists()) {
-                    const opt = document.createElement('option');
-                    opt.value = gId;
-                    opt.innerText = gSnap.data().name;
-                    selectEl.appendChild(opt);
-                }
-            }
-
-            if (groupIds.includes(currentSelected)) {
-                selectEl.value = currentSelected;
-            } else {
-                selectEl.value = groupIds[0];
-            }
-            onGroupSelected();
-        }
-
-        window.onGroupSelected = function() {
-            const selectEl = document.getElementById('group-select');
-            const selectedGroupId = selectEl.value;
-
-            if (!selectedGroupId) {
-                document.getElementById('selected-group-view').classList.add('hidden');
-                if (unsubscribeGroup) unsubscribeGroup();
-                return;
-            }
-
-            document.getElementById('selected-group-view').classList.remove('hidden');
-            listenGroupInfo(selectedGroupId);
-        };
-
-        window.createGroup = async function() {
-            const groupName = document.getElementById('new-group-name').value.trim();
-            if (!groupName) return alert("그룹 이름을 입력해주세요.");
-
-            try {
-                const groupRef = await addDoc(collection(db, "groups"), {
-                    name: groupName,
-                    createdBy: currentUser.uid,
-                    members: [currentUser.uid]
-                });
-
-                await updateDoc(doc(db, "users", currentUser.uid), {
-                    groups: arrayUnion(groupRef.id)
-                });
-
-                document.getElementById('new-group-name').value = '';
-                alert(`🎉 그룹 '${groupName}' 생성이 완료되었습니다!`);
-            } catch (err) { alert("그룹 생성 실패: " + err.message); }
-        };
-
-        window.joinGroup = async function() {
-            const groupId = document.getElementById('join-group-id').value.trim();
-            if (!groupId) return alert("초대 코드를 입력해주세요.");
-
-            try {
-                const groupRef = doc(db, "groups", groupId);
-                const groupSnap = await getDoc(groupRef);
-
-                if (!groupSnap.exists()) return alert("존재하지 않는 그룹 코드입니다.");
-
-                await updateDoc(groupRef, { members: arrayUnion(currentUser.uid) });
-                await updateDoc(doc(db, "users", currentUser.uid), { groups: arrayUnion(groupId) });
-
-                document.getElementById('join-group-id').value = '';
-                alert("그룹 참여 성공!");
-            } catch (err) { alert("그룹 참여 실패: " + err.message); }
-        };
-
-        window.leaveGroup = async function() {
-            const selectEl = document.getElementById('group-select');
-            const groupId = selectEl.value;
-            if (!groupId) return;
-
-            if (!confirm("정말 이 그룹을 탈퇴하시겠습니까?")) return;
-
-            try {
-                await updateDoc(doc(db, "groups", groupId), { members: arrayRemove(currentUser.uid) });
-                await updateDoc(doc(db, "users", currentUser.uid), { groups: arrayRemove(groupId) });
-
-                alert("선택한 그룹에서 탈퇴했습니다.");
-            } catch (err) { alert("탈퇴 실패: " + err.message); }
-        };
-
-        function listenGroupInfo(groupId) {
-            if (unsubscribeGroup) unsubscribeGroup();
-
-            const groupRef = doc(db, "groups", groupId);
-            unsubscribeGroup = onSnapshot(groupRef, async (groupSnap) => {
-                if (groupSnap.exists()) {
-                    const groupData = groupSnap.data();
-                    document.getElementById('current-group-name').innerText = groupData.name;
-                    document.getElementById('current-group-id').innerText = groupSnap.id;
-
-                    const memberListEl = document.getElementById('group-member-list');
-                    memberListEl.innerHTML = '';
-
-                    for (const memberUid of groupData.members) {
-                        const mUserSnap = await getDoc(doc(db, "users", memberUid));
-                        if (mUserSnap.exists()) {
-                            const mData = mUserSnap.data();
-                            const memberDiv = document.createElement('div');
-                            memberDiv.className = 'row';
-                            memberDiv.style.borderBottom = '1px solid #eee';
-                            memberDiv.style.padding = '5px 0';
-
-                            const isMe = memberUid === currentUser.uid;
-                            const memberNick = mData.nickname || '사용자';
-                            const displayName = isMe ? `${memberNick} (나)` : memberNick;
-                            const streak = mData.attendanceStreak || 0;
-
-                            memberDiv.innerHTML = `
-                                <span>🔥 ${displayName}</span>
-                                <span style="font-size: 0.85rem; color: #555;">연속 ${streak}일 출석 중</span>
-                            `;
-                            memberListEl.appendChild(memberDiv);
-                        }
-                    }
-                }
-            });
-        }
-
-        // 출석 체크 로직 (로컬 한국 시간 처리 적용)
-        window.checkAttendance = async function() {
-            if (!currentUser) return;
-            try {
-                const userRef = doc(db, "users", currentUser.uid);
-                const docSnap = await getDoc(userRef);
-                const data = docSnap.data() || {};
-
-                const todayStr = getLocalDateString();
-                
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayStr = getLocalDateString(yesterday);
-
-                let newStreak = 1;
-                // 어제 출석을 완료했었다면 +1일 연장
-                if (data.lastAttendanceDate === yesterdayStr) {
-                    newStreak = (data.attendanceStreak || 0) + 1;
-                }
-
-                await updateDoc(userRef, {
-                    attendanceStreak: newStreak,
-                    lastAttendanceDate: todayStr
-                });
-                
-                alert(`🎉 출석 완료! 현재 ${newStreak}일 연속 출석 중입니다!`);
-            } catch (err) {
-                alert("출석 체크 중 오류가 발생했습니다: " + err.message);
-            }
-        };
-
-        window.addFocusTime = async function(minutes) {
-            if (!currentUser) return;
-            const userRef = doc(db, "users", currentUser.uid);
-            const docSnap = await getDoc(userRef);
-            const data = docSnap.data();
-
-            let weeklyArr = (data && data.weeklyFocusMinutes) ? data.weeklyFocusMinutes : [0, 0, 0, 0, 0, 0, 0];
-            const todayIndex = new Date().getDay();
-            weeklyArr[todayIndex] += minutes;
-
-            await updateDoc(userRef, { weeklyFocusMinutes: weeklyArr });
-        };
-
-        window.toggleTimer = function() {
-            const btn = document.getElementById('timer-btn');
-            if (timerState.isRunning) {
-                clearInterval(timerState.interval);
-                timerState.isRunning = false;
-                btn.innerText = "이어서 시작";
-            } else {
-                timerState.isRunning = true;
-                btn.innerText = "일시정지";
-                timerState.interval = setInterval(() => {
-                    timerState.remainingSeconds--;
-                    updateTimerDisplay();
-
-                    if (timerState.remainingSeconds <= 0) {
-                        clearInterval(timerState.interval);
-                        timerState.isRunning = false;
-                        btn.innerText = "시작";
-                        window.addFocusTime(25);
-                        alert("⏱️ 목표 시간 달성! DB에 기록되었습니다.");
-                        timerState.remainingSeconds = 25 * 60;
-                        updateTimerDisplay();
-                    }
-                }, 1000);
-            }
-        };
-
-        window.resetTimer = function() {
-            clearInterval(timerState.interval);
-            timerState.isRunning = false;
-            timerState.remainingSeconds = 25 * 60;
-            document.getElementById('timer-btn').innerText = "시작";
-            updateTimerDisplay();
-        };
-
-        function updateTimerDisplay() {
-            const m = Math.floor(timerState.remainingSeconds / 60).toString().padStart(2, '0');
-            const s = (timerState.remainingSeconds % 60).toString().padStart(2, '0');
-            document.getElementById('timer-display').innerText = `${m}:${s}`;
-        }
-
-        function initChart() {
-            const ctx = document.getElementById('weeklyChart').getContext('2d');
-            weeklyChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['일', '월', '화', '수', '목', '금', '토'],
-                    datasets: [{
-                        label: '집중 시간 (분)',
-                        data: [0, 0, 0, 0, 0, 0, 0],
-                        backgroundColor: '#007bff'
-                    }]
-                },
-                options: { responsive: true, scales: { y: { beginAtZero: true } } }
-            });
-        }
-    </script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
